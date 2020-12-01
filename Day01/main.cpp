@@ -44,6 +44,12 @@ std::pair<int, int> searchForAdded(int const sum, std::vector<int>::const_iterat
 	return {-1, -1};
 }
 
+struct IntTriple {
+	int first;
+	int second;
+	int third;
+};
+
 int main(int argc, char** argv) {
 	if (argc != 2) {
 		std::cout << "Expected path to input file." << std::endl;
@@ -54,11 +60,25 @@ int main(int argc, char** argv) {
 
 	std::sort(std::begin(input), std::end(input));
 
-	auto start{std::cbegin(input)};
-	auto end {std::cbegin(input) + (input.size() - 1)};
 
-	std::pair<int, int> result{searchForAdded(2020, start, end)};
+	IntTriple result{};
+	std::for_each(std::cbegin(input), std::cend(input), [&input, finalResult = &result](int const val) mutable {
+		// look for the two numers which produce the remaining y
+		int const y = 2020 - val;
 
-	log("Result [") << result.first << " | " << result.second << "] = " << result.first * result.second << std::endl;
+		auto start{std::cbegin(input)};
+		auto end {std::cbegin(input) + (input.size() - 1)}; // last element
+		std::pair<int, int> result{searchForAdded(y, start, end)};
+
+		if (result.first != -1) {
+			finalResult->first = result.first;
+			finalResult->second = result.second;
+			finalResult->third = val;
+		}
+	});
+
+
+	log("Result [") << result.first << " | " << result.second << " | " << result.third << "] = "
+		<< result.first * result.second * result.third << std::endl;
 	return 0;
 }
