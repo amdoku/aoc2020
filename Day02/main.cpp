@@ -51,8 +51,7 @@ std::istream& operator>>(std::istream& in, Password & t) {
 
 	t.password = std::move(password);
 	t.testFn = [lowerBound, upperBound, letter](std::string const & view) -> bool {
-		const auto amount = std::count(view.begin(), view.end(), letter);
-		return lowerBound <= amount && amount <= upperBound;
+		return (view[lowerBound - 1] == letter) xor (view[upperBound - 1] == letter);
 	};
 
 	return in;
