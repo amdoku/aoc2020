@@ -5,8 +5,8 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
+#include <complex>
 #include <numeric>
-#include <cassert>
 
 std::ostream & log() {
 	return std::cout << "[ LOG ] | ";
@@ -15,31 +15,6 @@ std::ostream & log() {
 std::ostream & log(std::string_view msg) {
 	return log() << msg;
 }
-
-// Fwd declare
-struct Trie;
-
-using MovementFn = std::function<bool(Trie&, int)>;
-
-struct Trie final {
-	int coloumn{};
-	int row{};
-	int treesHit{};
-
-	MovementFn move;
-};
-
-template<int coloumn, int rows>
-struct traverse final {
-	bool operator()(Trie& t, int row) {
-		if (row == t.row) {
-			t.coloumn += coloumn;
-			t.row += rows;
-			return true;
-		}
-		return false;
-	}
-};
 
 std::vector<std::string> readFromFile(std::string_view filename) {
 	std::ifstream istream{filename.data()};
@@ -53,47 +28,42 @@ std::vector<std::string> readFromFile(std::string_view filename) {
 	return data;
 }
 
-void hitTree(Trie & pos, std::string const & line, int row) {
-	if (pos.row == row && line.at(pos.coloumn % line.length()) == '#') {
-		pos.treesHit++;
-	}
-}
-
-
 int main(int argc, char** argv) {
 	if (argc != 2) {
 		std::cout << "Expected path to input file." << std::endl;
 		return -2;
 	}
-	std::vector<std::string> input{readFromFile(argv[1])};
+	std::vector<std::string> const input{readFromFile(argv[1])};
 
 	log("input size = ") << input.size() << "\n";
+	size_t const lineLength{input.at(0).length()};
 
-	Trie t{0, 0, 0, traverse<3, 1>{}};
-
-	std::array<Trie, 5> position{{
-		{.move = traverse<1, 1>{}},
-		{.move = traverse<3, 1>{}},
-		{.move = traverse<5, 1>{}},
-		{.move = traverse<7, 1>{}},
-		{.move = traverse<1, 2>{}}
+	std::array<std::complex<int>, 5> position{{
+		{1, 1},
+		{3, 1},
+		{5, 1},
+		{7, 1},
+		{1, 2}
 	}};
-	std::for_each(std::cbegin(input), std::cend(input), [&position, row = 0](std::string const & line) mutable -> void {
-		std::for_each(std::begin(position), std::end(position), [&line, row](Trie & pos) -> void {
-			hitTree(pos, line, row);
-			pos.move(pos, row);
-		});
-		row++;
+	// line is real
+	// coloumn is imaginary
+	std::array<int, position.max_size()> result{};
+	std::transform(std::begin(position), std::end(position), result.begin(), [&input, lineLength](auto const & direction) -> int {
+		int treesHit{};
+		for(std::complex<int> start{}; static_cast<size_t>(start.imag()) < input.size(); start += direction) {
+			if (input.at(start.imag())
+					.at(start.real() % lineLength) == '#') {
+				treesHit++;
+			}
+		}
+		return treesHit;
 	});
 
-	std::for_each(std::begin(position), std::end(position), [](Trie const & t) {
-		log("Trees hit = ") << t.treesHit << "\n";
-	});
+	for(int ii = 0; ii < 5; ii++) {
+		log() << position[ii] << ": " << result[ii] << "\n";
+	}
 
-	log("Result = ") << std::accumulate(std::begin(position), std::end(position), 1, [](int64_t acc, Trie const & t) -> int64_t {
-		assert(t.treesHit > 0);
-		return acc * t.treesHit;
-	}) << "\n";
+	log("Product = ") << std::transform_reduce(std::cbegin(result), std::cend(result), 1ll, std::multiplies<>{}, [](int a) { return a; });
 
 	return 0;
 }
