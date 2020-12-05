@@ -28,7 +28,12 @@ endif()
 if (MSVC)
 	add_compile_options(/W4 /WX)
 else()
-	add_compile_options(-Wall -Werror -Wextra)
+	add_compile_options(-Wall -Werror -Wshadow
+			-Wpedantic -Wsign-conversion -Wformat=2
+			-Wdouble-promotion -Wnull-dereference -Wconversion
+			-Wcast-align -Wextra -Wduplicated-branches
+			-Wlogical-op -Wduplicated-cond -Wmisleading-indentation
+			-Wuseless-cast -Wunused)
 endif()
 
 # binary
