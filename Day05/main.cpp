@@ -16,6 +16,10 @@ struct Seat final {
 	Coloumn seat{};
 };
 
+constexpr auto seatID = [](Seat const & s) -> auto {
+	return s.row.to_ulong() * 8 + s.seat.to_ulong();
+};
+
 std::ostream &log() {
 	return std::cout << "[ LOG ] | ";
 }
@@ -73,7 +77,7 @@ int main(int argc, char** argv) {
 		return -2;
 	}
 
-	auto const input{readFromFile<Seat>(argv[1])};
+	auto input{readFromFile<Seat>(argv[1])};
 
 	log("input size = ") << input.size() << "\n";
 
@@ -81,10 +85,24 @@ int main(int argc, char** argv) {
 	// get highest
 	auto part1{0ul};
 	std::for_each(input.begin(), input.end(), [&part1](Seat const & entry) {
-		part1 = std::max(part1, entry.row.to_ulong() * 8 + entry.seat.to_ulong());
+		part1 = std::max(part1, seatID(entry));
+	});
+
+	// part2
+	// get seatID where seatID+1 and seatID-1 exist
+	// delta(seatID_before, seatID_after) == 2
+	std::sort(input.begin(), input.end(), [](Seat const & a, Seat const & b) {
+		return seatID(a) > seatID(b);
+	});
+
+	auto const seat = std::find_if(input.begin()+1, input.end(), [lastId = seatID(*input.begin())](Seat const & entry) mutable {
+		auto const delta = lastId - seatID(entry);
+		lastId = seatID(entry);
+		return delta != 1;
 	});
 
 	log("Part 1: ") << part1 << '\n';
+	log("Part 2: ") << seatID(*seat) << " [sol] " << seatID(*(seat - 1)) << '\n';
 
 	return 0;
 }
