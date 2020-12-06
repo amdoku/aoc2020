@@ -30,21 +30,25 @@ std::istream& operator>>(std::istream &in, Answers & out) {
 	std::string line{};
 	std::getline(in, line);
 
-	Answers v{};
+	Answers group{};
+	group.yesAnswers.flip();
 	do {
-		std::for_each(line.cbegin(), line.cend(), [&v](char const c) {
+		Answers person{};
+		std::for_each(line.cbegin(), line.cend(), [&person](char const c) {
 			if ('a' <= c && c <= 'z') {
 				assert(toMask(c) < 26);
-				v.yesAnswers.set(toMask(c));
+				person.yesAnswers.set(toMask(c));
 			} else {
-				log("Encountered charachter '") << c << "'\n";
+				log("Encountered character '") << c << "'\n";
 			}
 		});
+
+		group.yesAnswers &= person.yesAnswers;
 
 		std::getline(in, line);
 	} while (line.length() > 0);
 
-	out = v;
+	out = group;
 
 	return in;
 }
@@ -77,7 +81,7 @@ int main(int argc, char** argv) {
 		return acc + entry.yesAnswers.count();
 	});
 
-	log("Part 1: ") << part1 << '\n';
+	log("Part 2: ") << part1 << '\n';
 
 	return 0;
 }
