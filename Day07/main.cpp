@@ -9,6 +9,7 @@
 #include <cassert>
 #include <set>
 #include <map>
+#include <numeric>
 
 struct BagContains final {
 	std::string name;
@@ -93,6 +94,14 @@ std::istream& operator>>(std::istream &in, Bag& out) {
 	return in;
 }
 
+long countBags(Bag const & start, std::vector<Bag> const & input) {
+	return std::accumulate(start.contains.begin(), start.contains.end(), 1l, [&input](auto acc, BagContains const & bags) {
+		return acc + bags.amount * countBags(*std::find_if(input.begin(), input.end(), [&name = bags.name](Bag const & bag) {
+			return bag.name == name;
+		}), input);
+	});
+}
+
 template<typename T>
 auto readFromFile(std::string_view filename) {
 	std::ifstream istream{filename.data()};
@@ -145,7 +154,11 @@ int main(int argc, char** argv) {
 		searchSpace = std::move(nextSearch);
 	}
 
+	auto shinyBag = std::find_if(input.begin(), input.end(), [&needle](auto && e) { return e.name == needle; });
+
 	// subtract 1 to account for visited containing shiny gold
 	log("Result 1: ") << visited.size() - 1 << '\n';
+	// subtract 1 to account for shiny gold
+	log("Result 2: ") << countBags(*shinyBag, input) - 1 << '\n';
 	return 0;
 }
