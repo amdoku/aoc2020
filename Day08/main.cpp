@@ -27,7 +27,7 @@ struct Instruction final {
 	ssize_t instructionDelta{1};
 	ssize_t accumulatorDelta{};
 
-	InstructionType type{}; // here for debug reasons
+	InstructionType type{};
 };
 
 Instruction::InstructionType from_string(std::string_view view) {
@@ -61,9 +61,8 @@ std::istream& operator>>(std::istream &in, Instruction& out) {
 			instruction.accumulatorDelta = delta;
 			break;
 		case Instruction::InstructionType::JMP:
-			instruction.instructionDelta = delta;
-			break;
 		case Instruction::InstructionType::NOOP:
+			instruction.instructionDelta = delta;
 			break;
 	}
 
@@ -71,16 +70,18 @@ std::istream& operator>>(std::istream &in, Instruction& out) {
 	return in;
 }
 
+using Memory = std::vector<Instruction>;
+
 class CPU final {
 	ssize_t accumulator;
 	ssize_t instructionRegister;
 
-	std::vector<Instruction> memory;
+	Memory memory;
 
 public:
 
-	explicit CPU(std::vector<Instruction> && mem) : accumulator(0), instructionRegister(0),
-		memory(std::move(mem)) {}
+	explicit CPU(Memory & mem) : accumulator(0), instructionRegister(0),
+		memory(mem) {}
 
 	CPU(CPU const &) = delete;
 	CPU& operator=(CPU const &) = delete;
@@ -96,11 +97,64 @@ public:
 		assert(instructionRegister >= 0);
 		Instruction const & in{memory.at(static_cast<size_t>(instructionRegister))};
 		accumulator += in.accumulatorDelta;
-		instructionRegister += in.instructionDelta;
+		if (in.type != Instruction::InstructionType::NOOP) {
+			instructionRegister += in.instructionDelta;
+		} else {
+			instructionRegister++;
+		}
 
 		return instructionRegister;
 	}
+
+	[[nodiscard]]
+	bool terminated() const {
+		return static_cast<size_t>(instructionRegister) >= memory.size();
+	}
+
+	void reset() {
+		instructionRegister = 0;
+		accumulator = 0;
+	}
+
+	friend bool run(CPU & cpu, std::pair<ssize_t, Instruction> const & instructionToMod);
 };
+
+auto constexpr recordInstruction = [](Memory const &memory, ssize_t instructionCounter) -> std::optional<std::pair<ssize_t, Instruction>> {
+	using InstructionType = Instruction::InstructionType;
+	auto instruction{memory.at(static_cast<size_t>(instructionCounter))};
+	switch(instruction.type) {
+		case InstructionType::JMP:
+		case InstructionType::NOOP:
+			return std::make_pair(instructionCounter, instruction);
+		case InstructionType::ACC:
+			break;
+	}
+	return {};
+};
+
+auto constexpr switchInstruction(Instruction & instruction) {
+	if (instruction.type == Instruction::InstructionType::JMP) {
+		instruction.type = Instruction::InstructionType::NOOP;
+	} else if (instruction.type == Instruction::InstructionType::NOOP) {
+		instruction.type = Instruction::InstructionType::JMP;
+	}
+}
+
+bool run(CPU & cpu, std::pair<ssize_t, Instruction> const & instructionToMod) {
+	std::set<ssize_t> seenInstructions{};
+	auto instruction{0l};
+
+	switchInstruction(cpu.memory.at(static_cast<std::size_t>(instructionToMod.first)));
+
+	while(!cpu.terminated() && seenInstructions.find(instruction) == seenInstructions.end()) {
+		seenInstructions.insert(instruction);
+		instruction = cpu.execute();
+	}
+
+	switchInstruction(cpu.memory.at(static_cast<std::size_t>(instructionToMod.first)));
+
+	return cpu.terminated();
+}
 
 template<typename T>
 auto readFromFile(std::string_view filename) {
@@ -126,17 +180,32 @@ int main(int argc, char** argv) {
 
 	log("input size = ") << input.size() << "\n";
 
-	CPU cpu{std::move(input)};
+	CPU cpu{input};
 
 	// execute until encountered already hit instruction register
 	auto instruction{0l};
 	std::set<ssize_t> seenInstructions{};
-	while(seenInstructions.find(instruction) == seenInstructions.end()) {
+	std::vector<std::pair<ssize_t, Instruction>> modifyableInstructions{};
+
+	while(!cpu.terminated() && seenInstructions.find(instruction) == seenInstructions.end()) {
 		seenInstructions.insert(instruction);
+		auto maybeRecordable = recordInstruction(input, instruction);
+		if (maybeRecordable) {
+			modifyableInstructions.push_back(std::move(maybeRecordable.value()));
+		}
 		instruction = cpu.execute();
 	}
 
 	log("Result 1: ") << cpu.acc() << '\n';
+
+	// replay with recorded jump and noop instructions
+	for(auto const & modifyableInstruction : modifyableInstructions) {
+		cpu.reset();
+		if (run(cpu, modifyableInstruction)) {
+			log("Result 2: ") << cpu.acc() << '\n';
+			break;
+		}
+	}
 
 	return 0;
 }
