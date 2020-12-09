@@ -38,3 +38,6 @@
 */bin
 */build
 */cmake-build-*
+
+# sample samples
+input_sample
