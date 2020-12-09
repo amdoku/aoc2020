@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <cassert>
+#include <numeric>
 
 std::ostream &log() {
 	return std::cout << "[ LOG ] | ";
@@ -48,6 +49,27 @@ private:
 };
 
 template<typename T>
+std::pair<typename T::const_iterator, typename T::const_iterator> findSummingSequence(T const & input, typename T::iterator dodgy) {
+	// look in [input.begin, dodgy[ for sequence of elements that sum up to *dodgy
+	auto begin{input.begin()};
+	while(begin < dodgy) {
+		auto sequenceEnd{begin + 1}; // can not be the sum of two numbers,
+		// otherwise we'd have found it in the first result.
+		auto sum{0ul};
+		while (*dodgy > sum) {
+			sequenceEnd++;
+			sum = std::accumulate(begin, sequenceEnd, 0ul);
+		}
+		// *dodgy <= sum
+		if (*dodgy == sum) {
+			return {begin, sequenceEnd};
+		}
+		begin++;
+	}
+	return {};
+}
+
+template<typename T>
 auto readFromFile(std::string_view filename) {
 	std::ifstream istream{filename.data()};
 	if (!istream) {
@@ -76,6 +98,12 @@ int main(int argc, char** argv) {
 	auto dodgy = encoding(input.begin(), input.end());
 
 	log("Result 1: ") << *dodgy << '\n';
+
+	auto [begin, end] = findSummingSequence(input, dodgy);
+
+	auto const min = std::min_element(begin, end);
+	auto const max = std::max_element(begin, end);
+	log("Result 2: ") << *min + *max << '\n';
 
 	return 0;
 }
