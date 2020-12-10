@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 		return -2;
 	}
 
-	auto input{readFromFile<int>(argv[1])};
+	auto input{readFromFile<size_t>(argv[1])};
 	input.push_back((*std::max_element(input.begin(), input.end())) + 3);
 	input.push_front(0);
 
@@ -51,6 +51,19 @@ int main(int argc, char** argv) {
 	auto oneCount = std::count(deltaJolts.begin(), deltaJolts.end(), 1);
 
 	log("Part 1: ") << threeCount * oneCount << '\n';
+
+	// Part 2
+	// go from "goal" to "start",
+	// filling in the number of paths which lead from this jolt amount to the "goal"
+	std::vector<size_t> paths(input.back() + 1, 0);
+	paths.at(input.back()) = 1; // only one path leads to the "goal" by definition
+
+	// we've fixed the paths to the goal, so start loop with second to last element
+	std::for_each(++input.crbegin(), input.crend(), [&paths](auto const jolt) {
+		paths.at(jolt) = paths.at(jolt + 1) + paths.at(jolt + 2) + paths.at(jolt + 3);
+	});
+
+	log("Part 2: ") << paths.at(0) << '\n';
 
 	return 0;
 }
