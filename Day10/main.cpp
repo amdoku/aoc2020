@@ -5,6 +5,7 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
+#include <numeric>
 
 std::ostream &log() {
 	return std::cout << "[ LOG ] | ";
@@ -42,17 +43,12 @@ int main(int argc, char** argv) {
 	log("input size = ") << input.size() << "\n";
 
 	std::sort(input.begin(), input.end());
+	std::vector<int> deltaJolts(input.size());
 
-	int threeCount = 0;
-	int oneCount = 0;
+	std::adjacent_difference(input.begin(), input.end(), deltaJolts.begin());
 
-	std::for_each(input.begin(), input.end(), [last = 0, &threeCount, &oneCount](int jolts) mutable {
-		auto retVal = jolts - last;
-		last = jolts;
-		if (retVal == 3) threeCount++;
-		if (retVal == 1) oneCount++;
-		return retVal;
-	});
+	auto threeCount = std::count(deltaJolts.begin(), deltaJolts.end(), 3);
+	auto oneCount = std::count(deltaJolts.begin(), deltaJolts.end(), 1);
 
 	log("Part 1: ") << threeCount * oneCount << '\n';
 
