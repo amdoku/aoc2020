@@ -107,17 +107,9 @@ auto readFromFile(std::string_view filename) {
 	return data;
 }
 
-int main(int argc, char** argv) {
-	if (argc != 2) {
-		std::cout << "Expected path to input file." << std::endl;
-		return -2;
-	}
-
-	auto const input{readFromFile<std::string>(argv[1])};
-
+Coordinates part1(std::vector<std::string> const & input) {
 	Ship ship{};
 	for(auto const & line : input) {
-		log(ship) << " -> " << line << '\n';
 		auto value{std::stol(line.data() + 1)};
 		switch(line.at(0)) {
 			case 'E':
@@ -145,10 +137,67 @@ int main(int argc, char** argv) {
 				assert(false);
 		}
 	}
+	return ship.coord;
+}
+
+Coordinates part2(std::vector<std::string> const & input) {
+	Coordinates waypoint{10, 1};
+	Coordinates coords{};
+
+	for(auto const & line : input) {
+		auto value{std::stol(line.data() + 1)};
+		switch(line.at(0)) {
+			case 'E':
+				waypoint += Coordinates{value, 0};
+				break;
+			case 'W':
+				waypoint += Coordinates{-value, 0};
+				break;
+			case 'N':
+				waypoint += Coordinates{0, value};
+				break;
+			case 'S':
+				waypoint += Coordinates{0, -value};
+				break;
+			case 'L':
+				value = 360 - value;
+				[[fallthrough]];
+			case 'R': {
+				for (auto doTurns{value / 90}; doTurns > 0; doTurns--) {
+					auto temp = waypoint.imag();
+					waypoint.imag(-waypoint.real());
+					waypoint.real(temp);
+				}
+				break;
+			}
+			case 'F': {
+				coords += (waypoint * value);
+				break;
+			}
+			default:
+				assert(false);
+		}
+	}
+
+	return coords;
+}
+
+int main(int argc, char** argv) {
+	if (argc != 2) {
+		std::cout << "Expected path to input file." << std::endl;
+		return -2;
+	}
+
+	auto const input{readFromFile<std::string>(argv[1])};
+
+	Coordinates ship1{part1(input)};
+
+	Coordinates ship2{part2(input)};
 
 	log("input size=") << input.size() << '\n';
 
-	log("Part 1: ") << manhattanDistance(ship.coord) << '\n';
+	log("Part 1: ") << manhattanDistance(ship1) << '\n';
+	log("part 2: ") << manhattanDistance(ship2) << '\n';
 
 	return 0;
 }
